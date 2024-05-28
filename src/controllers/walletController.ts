@@ -17,10 +17,10 @@ const walletController = {
             const wallet = await Wallet.findOne({where:{
                 userId: existingUser.id
             }})
-            res.status(200).json({message: "get Wallet!", wallet: wallet});
+            res.status(200).json({message: "Wallet Returned Successfully!", wallet: wallet});
         }
         catch(error){
-            res.status(500).json({message: "Error occured when logging in, Please try again later: ", error: String(error)})
+            res.status(500).json({message: "Error occured when Retrieving Wallet, Please try again later: ", error: String(error)})
         }
     },
     creditWalletFromExternal:async(req: Request, res: Response)=>{
@@ -29,7 +29,7 @@ const walletController = {
                 amount, description } = req.body;
             
             if(!senderAccountIdentifier  || !senderAccountType || !senderInstitutionName || amount <= 0){
-                return res.status(404).json({message: "Form incomplete, Please enter all required information"});
+                return res.status(400).json({message: "Form incomplete, Please enter all required information"});
             }
 
             const receivingUser = await User.findOne({where:{
@@ -181,7 +181,7 @@ const walletController = {
                 amount, description } = req.body;
 
             if(!receiverAccountIdentifier || !receiverAccountType || !receiverInstitutionName || amount<=0){
-                return res.status(404).json({message: "Form incomplete, Please enter all required information"});
+                return res.status(400).json({message: "Form incomplete, Please enter all required information"});
             }
             
             const sendingUser = await User.findOne({where:{
