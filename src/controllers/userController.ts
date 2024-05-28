@@ -2,13 +2,14 @@ import { NextFunction, Request, Response } from "express";
 import { User } from "../models/userModel";
 import { compare, hash } from "bcrypt";
 import { sign, verify } from "jsonwebtoken";
+import { Sequelize, Transaction } from "sequelize";
 import { Wallet } from "../models/walletModel";
 
 const userController = {
     signUp: async(req: Request, res: Response)=>{
         try{
-            if(req.body.email == null || req.body.password == null){
-                return res.status(400).json({message: "Please enter your Email and Password"});
+            if(!req.body.email || !req.body.password || !req.body.firstName || !req.body.lastName){
+                return res.status(400).json({message: "Please enter complete the form"});
             }
             // Check if user exists
             const existingUser = await User.findOne({where:{
@@ -22,18 +23,26 @@ const userController = {
             // if user does not exist, create a new user
             // first hash password
             const hashedPassword = await hash(req.body.password, 10)
-            const newUser = await User.create({
-                firstName: req.body.firstName,
-                lastName: req.body.lastName,
-                email: req.body.email,
-                password: hashedPassword
+            const sequelize = User.sequelize as Sequelize;
+
+            //to make sure that the user and wallet always get created together
+            await sequelize.transaction({isolationLevel: Transaction.ISOLATION_LEVELS.REPEATABLE_READ},
+                async(transaction: Transaction)=>{
+
+                    const newUser = await User.create({
+                        firstName: req.body.firstName,
+                        lastName: req.body.lastName,
+                        email: req.body.email,
+                        password: hashedPassword
+                    }, {transaction: transaction});
+                    // create a new wallet as well for the user
+                    await Wallet.create({
+                        userId: newUser.id,
+                        balance: 0.0
+                    }, {transaction: transaction})
+
             });
-            // create a new wallet as well for the user
-            await Wallet.create({
-                userId: newUser.id,
-                balance: 0.0
-            })
-        
+            
             return res.status(201).json({message: "Signup Successful!"});
         }
         catch(error){
@@ -84,7 +93,7 @@ const userController = {
             
         }
         catch(error){
-            return res.status(500).json({message: "Error occured when logging in, Please try again later: " , error: String(error)})
+            return res.status(500).json({message: "Error occured, Please login again " , error: String(error)})
         }
     }
 }
